@@ -54,6 +54,18 @@ SequenceDiagram >> computeGroupsFor: aSequenceInstanceFragment [
 ]
 
 { #category : #hooks }
+SequenceDiagram >> computeScaleFactor [
+	"fewer messages => (more space between them <=> bigger scaleFactor)"
+	| domainMin domainMax rangeMin rangeMax |
+	domainMin := 7.
+	domainMax := 30.
+	rangeMin := 8.
+	rangeMax := 20.
+	scaleFactor := (1 - ((messages size - domainMin) / (domainMax - domainMin))) * (rangeMax - rangeMin) + rangeMin.
+	scaleFactor := scaleFactor min: rangeMax max: rangeMin
+]
+
+{ #category : #hooks }
 SequenceDiagram >> createAllCallLines [
 	^ messages collectWithIndex: [ :aSequenceEdge :index |
 		 self createCallLineFor: aSequenceEdge at: (scaleFactor * index) ]
@@ -298,18 +310,14 @@ SequenceDiagram >> renderInstanceFragment: aSequenceInstanceFragment [
 
 { #category : #hooks }
 SequenceDiagram >> renderLinesOn: aCanvas [
-
-	| lifelines callLines callLinesLabels minimumDiff maximumDiff |
-	minimumDiff := 8.
-	maximumDiff := 30.
-	scaleFactor := maximumDiff / messages size max: minimumDiff.
-
+	| lifelines callLines callLinesLabels |
+	self computeScaleFactor.
 	lifelines := self createAllLifelines.
 	callLines := self createAllCallLines.
 	callLinesLabels := self createCallLineLabels: callLines.
 	aCanvas addAll: lifelines.
 	aCanvas addAll: callLinesLabels.
-	aCanvas addAll: callLines.
+	aCanvas addAll: callLines
 ]
 
 { #category : #accessing }
