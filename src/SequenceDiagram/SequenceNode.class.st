@@ -75,6 +75,5 @@ SequenceNode >> sends: selector to: aSequenceNode [
 SequenceNode >> title [
 	^ String streamContents: [ :stream | 
 		name ifNotEmpty: [ stream << name; space ].
-		stream << $: << model class name.
-		 ]
+		stream << $: << model class name ]
 ]

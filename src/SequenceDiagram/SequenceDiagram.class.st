@@ -38,19 +38,17 @@ SequenceDiagram >> addMessage: aSequenceEdge [
 ]
 
 { #category : #'as yet unclassified' }
-SequenceDiagram >> computeGroupsFor: aSequenceInstanceFragment [ 
+SequenceDiagram >> computeGroupsFor: aSequenceInstanceFragment [
 	| indexes groups previous |
 	indexes := (aSequenceInstanceFragment instances collect: [ :instance |
-		instances indexOf: instance.
-		 ] as: Set) asSortedCollection.
+		instances indexOf: instance ] as: Set) asSortedCollection.
 	groups := OrderedCollection new.
 	previous := -1.
 	indexes do: [ :index | 
 		index - previous > 1 ifTrue: [ 
 			groups add: (OrderedCollection new) ].
 		groups last add: (container nodes at: index).
-		previous := index.
-		 ].
+		previous := index ].
 	^ groups
 	
 ]
@@ -65,7 +63,8 @@ SequenceDiagram >> createAllCallLines [
 SequenceDiagram >> createAllLifelines [
 	| totalHeight |
 	totalHeight := (messages size + 1) * scaleFactor.
-	^ self canvas nodes collect: [ :aShape | self createLifelinesOfHeight: totalHeight for: aShape ].
+	^ self canvas nodes collect: [ :aShape | 
+		self createLifelinesOfHeight: totalHeight for: aShape ].
 	
 ]
 
@@ -201,12 +200,12 @@ SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName [
 { #category : #hooks }
 SequenceDiagram >> createLifelinesOfHeight: totalHeight for: aShape [
 	| startPoint |
-	startPoint := aShape position x@ (aShape position y + (aShape height / 2)).
+	startPoint := aShape position x @ (aShape position y + (aShape height / 2)).
 	^ RSLine new
 		dashArray: #(3 1);
 		color: Color black;
 		startPoint: startPoint;
-		endPoint: aShape position x @(totalHeight + startPoint y);
+		endPoint: aShape position x @ (totalHeight + startPoint y);
 		yourself.
 ]
 
@@ -262,10 +261,9 @@ SequenceDiagram >> messages: anObject [
 { #category : #'menu - operations' }
 SequenceDiagram >> rename: aShape [ 
 	| name |
-	name := UIManager default request: 'New name' initialAnswer: ''.
+	name := UIManager default request: 'New name' initialAnswer: aShape model name.
 	name ifNil: [ ^ self ].
 	aShape model name: name trimBoth.
-	self update.
 	self canvas signalUpdate.
 ]
 
