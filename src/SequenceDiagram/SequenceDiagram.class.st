@@ -3,10 +3,29 @@ Class {
 	#superclass : #RSAbstractContainerBuilder,
 	#instVars : [
 		'instances',
-		'messages'
+		'messages',
+		'scaleFactor',
+		'fragments'
 	],
 	#category : #SequenceDiagram
 }
+
+{ #category : #adding }
+SequenceDiagram >> addFragment: aString forInstances: aCollection [ 
+	fragments add: (SequenceInstanceFragment new
+		instances: aCollection;
+		name: aString;
+		yourself)
+]
+
+{ #category : #adding }
+SequenceDiagram >> addFragment: aString from: aSequenceEdgeFrom to: aSequenceEdgeTo [
+	fragments add: (SequenceMessageFragment new
+		from: aSequenceEdgeFrom;
+		to: aSequenceEdgeFrom;
+		name: aString;
+		yourself)
+]
 
 { #category : #adding }
 SequenceDiagram >> addInstance: anObject [ 
@@ -18,41 +37,93 @@ SequenceDiagram >> addMessage: aSequenceEdge [
 	messages add: aSequenceEdge
 ]
 
-{ #category : #hooks }
-SequenceDiagram >> createAllCallLinesWithScale: scale [
-	^ messages collectWithIndex: [ :aSequenceEdge :index |
-		 self createCallLineFor: aSequenceEdge at: (scale * index) ]
+{ #category : #'as yet unclassified' }
+SequenceDiagram >> computeGroupsFor: aSequenceInstanceFragment [ 
+	| indexes groups previous |
+	indexes := (aSequenceInstanceFragment instances collect: [ :instance |
+		instances indexOf: instance.
+		 ] as: Set) asSortedCollection.
+	groups := OrderedCollection new.
+	previous := -1.
+	indexes do: [ :index | 
+		index - previous > 1 ifTrue: [ 
+			groups add: (OrderedCollection new) ].
+		groups last add: (container nodes at: index).
+		previous := index.
+		 ].
+	^ groups
+	
 ]
 
 { #category : #hooks }
-SequenceDiagram >> createAllLifelinesOfHeight: totalHeight [
+SequenceDiagram >> createAllCallLines [
+	^ messages collectWithIndex: [ :aSequenceEdge :index |
+		 self createCallLineFor: aSequenceEdge at: (scaleFactor * index) ]
+]
+
+{ #category : #hooks }
+SequenceDiagram >> createAllLifelines [
+	| totalHeight |
+	totalHeight := (messages size + 1) * scaleFactor.
 	^ self canvas nodes collect: [ :aShape | self createLifelinesOfHeight: totalHeight for: aShape ].
 	
 ]
 
 { #category : #hooks }
 SequenceDiagram >> createCallLineFor: aSequenceEdge at: yPosition [ 
-	| shapeSender shapeReceiver  |
+	| shapeSender shapeReceiver x1 x2 y1 y2 line arrow gap |
 	shapeSender := self canvas nodes shapeFromModel: aSequenceEdge sender.
 	shapeReceiver := self canvas nodes shapeFromModel: aSequenceEdge receiver.
-	^ RSArrowedLine new
-		model: aSequenceEdge;
+	x1 := shapeSender position x.
+	x2 := shapeReceiver position x.
+	y1 := yPosition+(shapeSender height).
+	y2 := yPosition+(shapeReceiver height).
+	gap := 2 * (x1 - x2) sign.
+	line := shapeSender = shapeReceiver ifTrue: [
+		gap := 2.
+		RSPolyline new
+			controlPoints: { 
+				x1@ y1.
+				shapeSender width/ 2 + x1 @ y1.
+				shapeSender width/ 2 + x1 @ (scaleFactor / 2+ y1).
+				x1 + gap @ (scaleFactor / 2+ y1) };
+			yourself ]
+		ifFalse: [ RSLine new
+			startPoint: x1 @ y1;
+			endPoint: x2 + gap @ y2;
+			yourself  ].
+	arrow := RSShapeFactory triangle
 		color: Color black;
-		in: [ :line | line markerEnd shape extent: 3@5 ];
-		startPoint: shapeSender position x @ (yPosition+(shapeSender height));
-		endPoint: shapeReceiver position x @ (yPosition+(shapeReceiver height)); 
-		yourself
+		extent: 3@4;
+		asMarker.
+	line
+		model: aSequenceEdge;
+		width: 0.6;
+		markerEnd: arrow;
+		joinMiter;
+		color: Color black.
+	^ line
+		
 ]
 
 { #category : #hooks }
 SequenceDiagram >> createCallLineLabelFor: line [ 
-	| label |
-	label := RSLabel new
+	| text label |
+	text := RSLabel new
+		metricsProvider: RSCairoFitMetricsProvider new;
 		text: line model selector;
 		fontSize: 5;
 		color: Color black;
 		yourself.
-	label position: line position + (label height / -2).
+	
+	label := { text } asShape
+		color: Color white;
+		yourself.
+	"label position: line position x @ (line position y +  (label height / -2))."
+	RSLocation new
+		above;
+		offset: 0@ -1;
+		move: label on: line.
 	^ label
 		
 ]
@@ -85,6 +156,48 @@ SequenceDiagram >> createColumns [
 	^ self instances collect: [ :aSequenceNode | self createColumnFor: aSequenceNode ]
 ]
 
+{ #category : #'as yet unclassified' }
+SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName [
+	| rectangle lineLineHeight label polygon box |
+	label := RSLabel new
+		text: fragmentName;
+		bold;
+		color: Color black;
+		fontSize: 5;
+		yourself.
+	rectangle := label encompassingRectangle.
+	polygon := RSPolygon new
+		points: {
+			rectangle origin.
+			rectangle topRight.
+			rectangle rightCenter.
+			rectangle corner x - (rectangle floatCenter y - rectangle origin y) @ rectangle corner y.
+			rectangle bottomLeft.
+			};
+		yourself.
+	polygon extent: polygon extent + (8 @ 2).
+	polygon noPaint.
+	polygon border: (RSBorder new width: 0.6; color: Color black).
+	box := RSBox new.
+	box noPaint.
+	rectangle := aCollection asGroup encompassingRectangle.
+	lineLineHeight := (scaleFactor + 1 ) * messages size.
+	rectangle := rectangle origin x @ (rectangle origin y - label height)
+		corner: rectangle corner x @ (rectangle corner y + lineLineHeight).
+	
+	box fromRectangle: rectangle. 
+	box extent: box extent + 10.
+	RSLocation new
+		inner; top; left;
+		move: polygon on: box.
+	label position: polygon position.
+	
+	box border: (RSBorder new
+		color: Color black).
+	
+	^ { box. polygon. label } asShape
+]
+
 { #category : #hooks }
 SequenceDiagram >> createLifelinesOfHeight: totalHeight for: aShape [
 	| startPoint |
@@ -107,6 +220,7 @@ SequenceDiagram >> initialize [
 	super initialize.
 	instances := OrderedCollection new.
 	messages := OrderedCollection new.
+	fragments := OrderedCollection new
 ]
 
 { #category : #accessing }
@@ -121,6 +235,18 @@ SequenceDiagram >> instances: anObject [
 	instances := anObject
 ]
 
+{ #category : #hooks }
+SequenceDiagram >> menuIn: aMenuMorph for: aShape [
+	(aMenuMorph 
+		add: 'Rename instance'
+		target: self
+		selector: #rename:
+		argument: aShape)
+		icon: (self iconNamed: #edit)
+		
+	
+]
+
 { #category : #accessing }
 SequenceDiagram >> messages [
 
@@ -133,31 +259,59 @@ SequenceDiagram >> messages: anObject [
 	messages := anObject
 ]
 
+{ #category : #'menu - operations' }
+SequenceDiagram >> rename: aShape [ 
+	| name |
+	name := UIManager default request: 'New name' initialAnswer: ''.
+	name ifNil: [ ^ self ].
+	aShape model name: name trimBoth.
+	self update.
+	self canvas signalUpdate.
+]
+
+{ #category : #hooks }
+SequenceDiagram >> renderFragments [
+	fragments do: [ :fragment | fragment renderIn: self ]
+]
+
 { #category : #hooks }
 SequenceDiagram >> renderIn: aCanvas [
 	| columnShapes |
 	columnShapes := self createColumns.
+	self setInteractionsOn: columnShapes.
 	RSHorizontalLineLayout on: columnShapes.
 	aCanvas addAll: columnShapes.
 	self renderLinesOn: aCanvas.
+	self renderFragments
 	
+]
+
+{ #category : #rendering }
+SequenceDiagram >> renderInstanceFragment: aSequenceInstanceFragment [ 
+	| groups fragmentShapes |
+	groups := self computeGroupsFor: aSequenceInstanceFragment.
+	fragmentShapes := groups collect: [ :group | 
+		self
+			createFragmentGroupFor: group
+			name: aSequenceInstanceFragment name ].
+	container addAll: fragmentShapes.
+	fragmentShapes do: #pushBack.
 ]
 
 { #category : #hooks }
 SequenceDiagram >> renderLinesOn: aCanvas [
 
-	| totalHeight lifelines callLines scaleFactor callLinesLabels minimumDiff maximumDiff |
-	minimumDiff := 7.
+	| lifelines callLines callLinesLabels minimumDiff maximumDiff |
+	minimumDiff := 8.
 	maximumDiff := 30.
 	scaleFactor := maximumDiff / messages size max: minimumDiff.
 
-	totalHeight := (messages size + 1) * scaleFactor.
-	lifelines := self createAllLifelinesOfHeight: totalHeight.
-	callLines := self createAllCallLinesWithScale: scaleFactor.
+	lifelines := self createAllLifelines.
+	callLines := self createAllCallLines.
 	callLinesLabels := self createCallLineLabels: callLines.
 	aCanvas addAll: lifelines.
+	aCanvas addAll: callLinesLabels.
 	aCanvas addAll: callLines.
-	aCanvas addAll: callLinesLabels
 ]
 
 { #category : #accessing }
@@ -171,8 +325,10 @@ SequenceDiagram >> run [
 
 	self addMessage: (a sends: 'get' to: b).
 	self addMessage: (a sends: 'set' to: b).
+	self addMessage: (b sends: 'self' to: b).
+	self addFragment: 'Fragment 1' forInstances: { a. c }.
 
-	0 timesRepeat: [ 
+	1 timesRepeat: [ 
 		self addMessage: (a sends: 'get' to: b).
 
 		self addMessage: (a sends: 'set' to: b).
@@ -182,4 +338,12 @@ SequenceDiagram >> run [
 		self addMessage: (c sends: 'bar' to: a).
 		self addMessage: (a sends: 'zork' to: c) ].
 	self open
+]
+
+{ #category : #hooks }
+SequenceDiagram >> setInteractionsOn: columnShapes [
+	columnShapes do: [ :shape |
+		shape addInteraction: (RSMenuActivable new
+			menuDo: [ :aMenuMorph :aShape | self menuIn: aMenuMorph for: aShape  ]
+		) ]
 ]

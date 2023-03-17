@@ -3,7 +3,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'model',
-		'messages'
+		'messages',
+		'name'
 	],
 	#category : #SequenceDiagram
 }
@@ -19,6 +20,7 @@ SequenceNode class >> model: anObject [
 SequenceNode >> initialize [
 	super initialize.
 	messages := OrderedCollection new.
+	name := ''
 ]
 
 { #category : #accessing }
@@ -44,6 +46,18 @@ SequenceNode >> model: anObject [
 	model := anObject
 ]
 
+{ #category : #accessing }
+SequenceNode >> name [
+
+	^ name
+]
+
+{ #category : #accessing }
+SequenceNode >> name: anObject [
+
+	name := anObject
+]
+
 { #category : #'as yet unclassified' }
 SequenceNode >> sends: selector to: aSequenceNode [ 
 	| edge |
@@ -59,5 +73,8 @@ SequenceNode >> sends: selector to: aSequenceNode [
 
 { #category : #accessing }
 SequenceNode >> title [
-	^ ':', model class name
+	^ String streamContents: [ :stream | 
+		name ifNotEmpty: [ stream << name; space ].
+		stream << $: << model class name.
+		 ]
 ]
