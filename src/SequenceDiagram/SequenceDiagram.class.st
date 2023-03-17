@@ -322,7 +322,6 @@ SequenceDiagram >> renderLinesOn: aCanvas [
 
 { #category : #accessing }
 SequenceDiagram >> run [
-
 	<script: 'self new run'>
 	| a b c |
 	a := self addInstance: 'A'.
@@ -330,19 +329,14 @@ SequenceDiagram >> run [
 	c := self addInstance: 'B'.
 
 	self addMessage: (a sends: 'get' to: b).
-	self addMessage: (a sends: 'set' to: b).
-	self addMessage: (b sends: 'self' to: b).
 	self addFragment: 'Fragment 1' forInstances: { a. c }.
 
 	1 timesRepeat: [ 
-		self addMessage: (a sends: 'get' to: b).
-
 		self addMessage: (a sends: 'set' to: b).
-		self addMessage: (b sends: 'compute' to: a).
-
-		self addMessage: (c sends: 'foo' to: b).
-		self addMessage: (c sends: 'bar' to: a).
-		self addMessage: (a sends: 'zork' to: c) ].
+		self addMessage: (b sends: 'self' to: b).
+		self addMessage: (b sends: 'compute' to: c).
+		self addMessage: (c sends: 'message:with:params:' to: a).
+		self addMessage: (a sends: 'thisIsAnEspeciallyLongSelector' to: c) ].
 	self open
 ]
 
