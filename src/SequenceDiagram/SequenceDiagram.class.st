@@ -180,7 +180,7 @@ SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName [
 	box := RSBox new.
 	box noPaint.
 	rectangle := aCollection asGroup encompassingRectangle.
-	lineLineHeight := (scaleFactor + 1 ) * messages size.
+	lineLineHeight := (messages size + 1) * scaleFactor.
 	rectangle := rectangle origin x @ (rectangle origin y - label height)
 		corner: rectangle corner x @ (rectangle corner y + lineLineHeight).
 	
