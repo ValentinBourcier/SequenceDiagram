@@ -87,17 +87,17 @@ SequenceDiagram >> createCallLineFor: aSequenceEdge at: yPosition [
 	shapeReceiver := self canvas nodes shapeFromModel: aSequenceEdge receiver.
 	x1 := shapeSender position x.
 	x2 := shapeReceiver position x.
-	y1 := yPosition+(shapeSender height).
-	y2 := yPosition+(shapeReceiver height).
+	y1 := yPosition + shapeSender height.
+	y2 := yPosition + shapeReceiver height.
 	gap := 2 * (x1 - x2) sign.
 	line := shapeSender = shapeReceiver ifTrue: [
 		gap := 2.
 		RSPolyline new
 			controlPoints: { 
-				x1@ y1.
-				shapeSender width/ 2 + x1 @ y1.
-				shapeSender width/ 2 + x1 @ (scaleFactor / 2+ y1).
-				x1 + gap @ (scaleFactor / 2+ y1) };
+				x1 @ y1.
+				shapeSender width / 2 + x1 @ y1.
+				shapeSender width / 2 + x1 @ (scaleFactor / 2 + y1).
+				x1 + gap @ (scaleFactor / 2 + y1) };
 			yourself ]
 		ifFalse: [ RSLine new
 			startPoint: x1 @ y1;
@@ -111,7 +111,7 @@ SequenceDiagram >> createCallLineFor: aSequenceEdge at: yPosition [
 		model: aSequenceEdge;
 		width: 0.6;
 		markerEnd: arrow;
-		joinMiter;
+		"joinMiter;"
 		color: Color black.
 	^ line
 		
@@ -133,7 +133,7 @@ SequenceDiagram >> createCallLineLabelFor: line [
 	"label position: line position x @ (line position y +  (label height / -2))."
 	RSLocation new
 		above;
-		offset: 0@ -1;
+		offset: 0@ -0.6;
 		move: label on: line.
 	^ label
 		
@@ -320,7 +320,7 @@ SequenceDiagram >> renderLinesOn: aCanvas [
 	aCanvas addAll: callLines
 ]
 
-{ #category : #accessing }
+{ #category : #examples }
 SequenceDiagram >> run [
 	<script: 'self new run'>
 	| a b c |
@@ -336,7 +336,7 @@ SequenceDiagram >> run [
 		self addMessage: (b sends: 'self' to: b).
 		self addMessage: (b sends: 'compute' to: c).
 		self addMessage: (c sends: 'message:with:params:' to: a).
-		self addMessage: (a sends: 'thisIsAnEspeciallyLongSelector' to: c) ].
+		self addMessage: (a sends: 'messageWithAnEspeciallyLongSelector' to: c) ].
 	self open
 ]
 
