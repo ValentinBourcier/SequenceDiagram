@@ -340,7 +340,8 @@ SequenceDiagram >> rename: aShape [
 	name := UIManager default request: 'New name' initialAnswer: aShape model name.
 	name ifNil: [ ^ self ].
 	aShape model name: name trimBoth.
-	self canvas signalUpdate.
+	self update.
+	container signalUpdate.
 ]
 
 { #category : #hooks }
