@@ -172,11 +172,8 @@ SequenceDiagram >> createCallLineFor: aSequenceEdge at: yPosition [
 { #category : #hooks }
 SequenceDiagram >> createCallLineLabelFor: line [ 
 	| text label |
-	text := RSLabel new
+	text := (self newLabelFor: line model selector)
 		metricsProvider: RSCairoFitMetricsProvider new;
-		text: line model selector;
-		fontSize: 5;
-		color: Color black;
 		yourself.
 	
 	label := { text } asShape
@@ -199,13 +196,12 @@ SequenceDiagram >> createCallLineLabels: callLines [
 { #category : #'as yet unclassified' }
 SequenceDiagram >> createColumnFor: aSequenceNode [ 
 	| label box |
-	label := RSLabel new
-		text: aSequenceNode title;
-		color: Color black;
+	label := (self newLabelFor: aSequenceNode title)
+		fontSize: 12;
 		yourself.
 	box := RSBox new
 		color: Color white;
-		border: (RSBorder new color: Color black);
+		border: self newBorder;
 		yourself.
 	box extent: label extent + 10.
 	^ { box. label } asShape
@@ -221,30 +217,12 @@ SequenceDiagram >> createColumns [
 { #category : #'as yet unclassified' }
 SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName height: fragmentShapeHeight [
 	| rectangle label polygon box |
-	label := RSLabel new
-		text: fragmentName;
-		bold;
-		color: Color black;
-		fontSize: 5;
-		yourself.
+	label := self newLabelFor: fragmentName.
 	rectangle := label encompassingRectangle.
-	polygon := RSPolygon new
-		color: Color white;
-		points: {
-			rectangle origin.
-			rectangle topRight.
-			rectangle rightCenter.
-			rectangle corner x - (rectangle floatCenter y - rectangle origin y) @ rectangle corner y.
-			rectangle bottomLeft.
-			};
-		yourself.
-	polygon extent: polygon extent + (8 @ 2).
+	polygon := self newFragmentPolygonFor: rectangle.
 	
-	polygon border: (RSBorder new width: 0.6; color: Color black).
-	box := RSBox new.
-	box noPaint.
+	box := RSBox new noPaint.
 	rectangle := aCollection asGroup encompassingRectangle.
-	
 	rectangle := rectangle origin x @ (rectangle origin y - label height)
 		corner: rectangle corner x @ (rectangle corner y + fragmentShapeHeight).
 	
@@ -254,10 +232,7 @@ SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName height
 		inner; top; left;
 		move: polygon on: box.
 	label position: polygon position.
-	
-	box border: (RSBorder new
-		color: Color black).
-	
+	box border: self newBorder.
 	^ { box. polygon. label } asShape
 ]
 
@@ -320,6 +295,43 @@ SequenceDiagram >> messages [
 SequenceDiagram >> messages: anObject [
 
 	messages := anObject
+]
+
+{ #category : #'as yet unclassified' }
+SequenceDiagram >> newBorder [
+	^ RSBorder new 
+		color: Color black;
+		joinMiter;
+		yourself
+]
+
+{ #category : #'as yet unclassified' }
+SequenceDiagram >> newFragmentPolygonFor: rectangle [
+	| polygon |
+	polygon := RSPolygon new
+		color: Color white;
+		points: {
+			rectangle origin.
+			rectangle topRight.
+			rectangle rightCenter.
+			rectangle corner x - (rectangle floatCenter y - rectangle origin y) @ rectangle corner y.
+			rectangle bottomLeft.
+			};
+		yourself.
+	polygon extent: polygon extent + (8 @ 2).
+	
+	polygon border: (self newBorder width: 0.6).
+	^ polygon
+]
+
+{ #category : #'as yet unclassified' }
+SequenceDiagram >> newLabelFor: aString [
+	^ RSLabel new
+		text: aString;
+		bold;
+		color: Color black;
+		fontSize: 5;
+		yourself.
 ]
 
 { #category : #'menu - operations' }
