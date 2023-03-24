@@ -21,5 +21,5 @@ SequenceInstanceFragment >> instances: anObject [
 
 { #category : #rendering }
 SequenceInstanceFragment >> renderIn: aSequenceDiagram [
-	aSequenceDiagram renderInstanceFragment: self
+	aSequenceDiagram renderInstanceFragment: self 
 ]

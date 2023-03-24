@@ -10,6 +10,56 @@ Class {
 	#category : #SequenceDiagram
 }
 
+{ #category : #'as yet unclassified' }
+SequenceDiagram class >> exampleWithFragments [
+	| a b c diagram |
+	diagram := self new.
+	a := diagram addInstance: 'A'.
+	b := diagram addInstance: 'B'.
+	c := diagram addInstance: 'C'.
+
+	diagram addMessage: (a sends: 'get' to: b).
+	diagram addFragment: 'Fragment 1' forInstances: { a. c }.
+
+	1 timesRepeat: [ 
+		diagram addMessage: (a sends: 'set' to: b).
+		diagram addMessage: (b sends: 'self' to: b).
+		diagram addMessage: (b sends: 'compute' to: c).
+		diagram addMessage: (c sends: 'message:with:params:' to: a).
+		diagram addMessage: (a sends: 'messageWithAnEspeciallyLongSelector' to: c) ].
+	^ diagram open
+]
+
+{ #category : #'as yet unclassified' }
+SequenceDiagram class >> exampleWithMethodFragments [
+	| a b c diagram get set zork |
+	diagram := self new.
+	a := diagram addInstance: 'A'.
+	b := diagram addInstance: 'B'.
+	c := diagram addInstance: 'C'.
+
+	2 timesRepeat: [ 
+		diagram addMessage: (a sends: 'set' to: b).
+		diagram addMessage: (b sends: 'self' to: b).
+		diagram addMessage: (b sends: 'compute' to: c).
+		diagram addMessage: (c sends: 'message:with:params:' to: a).
+		diagram addMessage: (a sends: 'messageWithAnEspeciallyLongSelector' to: c) ].
+	
+	get := diagram addMessage: (a sends: 'get' to: b).
+	set := diagram addMessage: (a sends: 'set' to: b).	
+	zork := diagram addMessage: (b sends: 'zork' to: c).	
+	diagram addFragment: 'Fragment 2' from: get to: zork.
+	
+	2 timesRepeat: [ 
+		diagram addMessage: (a sends: 'set' to: b).
+		diagram addMessage: (b sends: 'self' to: b).
+		diagram addMessage: (b sends: 'compute' to: c).
+		diagram addMessage: (c sends: 'message:with:params:' to: a).
+		diagram addMessage: (a sends: 'messageWithAnEspeciallyLongSelector' to: c) ].
+
+	^ diagram open
+]
+
 { #category : #adding }
 SequenceDiagram >> addFragment: aString forInstances: aCollection [ 
 	fragments add: (SequenceInstanceFragment new
@@ -22,7 +72,7 @@ SequenceDiagram >> addFragment: aString forInstances: aCollection [
 SequenceDiagram >> addFragment: aString from: aSequenceEdgeFrom to: aSequenceEdgeTo [
 	fragments add: (SequenceMessageFragment new
 		from: aSequenceEdgeFrom;
-		to: aSequenceEdgeFrom;
+		to: aSequenceEdgeTo;
 		name: aString;
 		yourself)
 ]
@@ -34,20 +84,22 @@ SequenceDiagram >> addInstance: anObject [
 
 { #category : #adding }
 SequenceDiagram >> addMessage: aSequenceEdge [
-	messages add: aSequenceEdge
+	messages add: aSequenceEdge.
+	^ aSequenceEdge
 ]
 
 { #category : #'as yet unclassified' }
 SequenceDiagram >> computeGroupsFor: aSequenceInstanceFragment [
-	| indexes groups previous |
+	| indexes groups previous shapeNodes |
 	indexes := (aSequenceInstanceFragment instances collect: [ :instance |
 		instances indexOf: instance ] as: Set) asSortedCollection.
 	groups := OrderedCollection new.
 	previous := -1.
+	shapeNodes := container nodes.
 	indexes do: [ :index | 
 		index - previous > 1 ifTrue: [ 
 			groups add: (OrderedCollection new) ].
-		groups last add: (container nodes at: index).
+		groups last add: (shapeNodes at: index).
 		previous := index ].
 	^ groups
 	
@@ -157,7 +209,6 @@ SequenceDiagram >> createColumnFor: aSequenceNode [
 		yourself.
 	box extent: label extent + 10.
 	^ { box. label } asShape
-		draggable;
 		model: aSequenceNode;
 		yourself.
 ]
@@ -168,8 +219,8 @@ SequenceDiagram >> createColumns [
 ]
 
 { #category : #'as yet unclassified' }
-SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName [
-	| rectangle lineLineHeight label polygon box |
+SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName height: fragmentShapeHeight [
+	| rectangle label polygon box |
 	label := RSLabel new
 		text: fragmentName;
 		bold;
@@ -178,6 +229,7 @@ SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName [
 		yourself.
 	rectangle := label encompassingRectangle.
 	polygon := RSPolygon new
+		color: Color white;
 		points: {
 			rectangle origin.
 			rectangle topRight.
@@ -187,14 +239,14 @@ SequenceDiagram >> createFragmentGroupFor: aCollection name: fragmentName [
 			};
 		yourself.
 	polygon extent: polygon extent + (8 @ 2).
-	polygon noPaint.
+	
 	polygon border: (RSBorder new width: 0.6; color: Color black).
 	box := RSBox new.
 	box noPaint.
 	rectangle := aCollection asGroup encompassingRectangle.
-	lineLineHeight := (messages size + 1) * scaleFactor.
+	
 	rectangle := rectangle origin x @ (rectangle origin y - label height)
-		corner: rectangle corner x @ (rectangle corner y + lineLineHeight).
+		corner: rectangle corner x @ (rectangle corner y + fragmentShapeHeight).
 	
 	box fromRectangle: rectangle. 
 	box extent: box extent + 10.
@@ -298,12 +350,14 @@ SequenceDiagram >> renderIn: aCanvas [
 
 { #category : #rendering }
 SequenceDiagram >> renderInstanceFragment: aSequenceInstanceFragment [ 
-	| groups fragmentShapes |
+	| groups fragmentShapes height |
 	groups := self computeGroupsFor: aSequenceInstanceFragment.
+	height := (messages size + 1) * scaleFactor.
 	fragmentShapes := groups collect: [ :group | 
 		self
 			createFragmentGroupFor: group
-			name: aSequenceInstanceFragment name ].
+			name: aSequenceInstanceFragment name
+			height: height ].
 	container addAll: fragmentShapes.
 	fragmentShapes do: #pushBack.
 ]
@@ -320,24 +374,22 @@ SequenceDiagram >> renderLinesOn: aCanvas [
 	aCanvas addAll: callLines
 ]
 
-{ #category : #examples }
-SequenceDiagram >> run [
-	<script: 'self new run'>
-	| a b c |
-	a := self addInstance: 'A'.
-	b := self addInstance: 'B'.
-	c := self addInstance: 'B'.
-
-	self addMessage: (a sends: 'get' to: b).
-	self addFragment: 'Fragment 1' forInstances: { a. c }.
-
-	1 timesRepeat: [ 
-		self addMessage: (a sends: 'set' to: b).
-		self addMessage: (b sends: 'self' to: b).
-		self addMessage: (b sends: 'compute' to: c).
-		self addMessage: (c sends: 'message:with:params:' to: a).
-		self addMessage: (a sends: 'messageWithAnEspeciallyLongSelector' to: c) ].
-	self open
+{ #category : #rendering }
+SequenceDiagram >> renderMessageFragment: aSequenceMessageFragment [
+	
+	| fromIndex toIndex lines group fragmentShape |
+	fromIndex := messages indexOf: aSequenceMessageFragment from.
+	toIndex := messages indexOf: aSequenceMessageFragment to.
+	lines := container lines.
+	group := (messages copyFrom: fromIndex to: toIndex) 
+		collect: [:message | lines shapeFromModel: message ]
+		as: RSGroup.
+	fragmentShape := self
+		createFragmentGroupFor: group
+		name: aSequenceMessageFragment name
+		height: 0.
+	container add: fragmentShape.
+	
 ]
 
 { #category : #hooks }

@@ -22,7 +22,7 @@ SequenceMessageFragment >> from: anObject [
 
 { #category : #rendering }
 SequenceMessageFragment >> renderIn: aSequenceDiagram [
-	"aSequenceDiagram renderMessageFragment: self"
+	aSequenceDiagram renderMessageFragment: self
 ]
 
 { #category : #accessing }

@@ -32,6 +32,21 @@ SequenceDiagramTest >> testFragments [
 	set := seq addMessage: (b sends: 'get' to: b).
 
 	seq addFragment: 'Fragment 1' forInstances: { a. b. d }.
+
+	window := seq open.
+	window delete.
+]
+
+{ #category : #tests }
+SequenceDiagramTest >> testFragmentsMethods [
+	| seq a b window c get set d |
+	seq := SequenceDiagram new.
+	a := seq addInstance: 'A'.
+	b := seq addInstance: 'B'.
+	c := seq addInstance: 'C'.
+	d := seq addInstance: 'D'.
+	get := seq addMessage: (a sends: 'get' to: b).
+	set := seq addMessage: (b sends: 'get' to: b).
 	seq addFragment: 'Fragment 2' from: get to: set.
 
 	window := seq open.
